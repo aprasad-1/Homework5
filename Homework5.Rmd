@@ -1,0 +1,118 @@
+---
+title: "Homework 5"
+output:
+  pdf_document: default
+  html_document: default
+author: Aditya Prasad - 
+        arp4759
+date: "2024-02-29"
+---
+
+                       Github: https://github.com/aprasad-1/Homework5.git
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(mosaic)
+library(ggplot2)
+library(knitr)
+```
+
+
+```{r, echo = FALSE}
+
+total_sims = do(100000)*nflip(n=2021, prob=0.024)
+p_value = sum(total_sims >= 70)/100000
+
+sims = tibble(total_sims)
+
+ggplot(sims) + 
+  geom_histogram(aes(x = nflip), binwidth = 1) + 
+  labs(title = "Distribution of Test Statistic")
+```
+The null hypothesis is that in the long run, securities trades from the Iron Bank are flagged at the same 2.4% baseline rate as that of other traders. The test statistic I used was the 70 flagged trades out of the 2021 trades by Iron bank employees. The p-value calculated is `r p_value`. Because this p-value is extremely small, it is extremely unlikely that the securities trades are flagged at the same 2.4% baseline rate as the other traders.
+
+```{r, echo=FALSE}
+
+sim_flips = do(100000)*nflip(n=50, prob=0.03)
+
+p_val = sum(sim_flips >= 8)/100000
+
+
+```
+
+The null hypothesis is the on average, restaurants in the city are cited for health code violations at the same 3% baseline rate. The test statistic is the number of health code violations reported. The p-value is `r p_val`, which is extremely small, making it extremely hard for the null hhypothesis to explain the evidence. This means that there is an extremely unlikely chance that restaurants in the city are cited for health code violations at the same 3% baseline rate, on average.
+  
+
+```{r, echo=FALSE, message=FALSE}
+
+text = readLines('brown_sentences.txt')
+letter_frequencies = read.csv("letter_frequencies.csv")
+
+calculate_chi_squared = function(sentence, freq_table) {
+  
+  freq_table$Probability = freq_table$Probability / sum(freq_table$Probability)
+  
+  clean_sentence = gsub("[^A-Za-z]", "", sentence)
+  clean_sentence = toupper(clean_sentence)
+  
+  observed_counts = table(factor(strsplit(clean_sentence, "")[[1]], levels = freq_table$Letter))
+  
+  total_letters = sum(observed_counts)
+  expected_counts = total_letters * freq_table$Probability
+  
+  chi_squared_stat = sum((observed_counts - expected_counts)^2 / expected_counts)
+  
+  return(chi_squared_stat)
+}
+
+
+result = numeric(0)
+
+for (sentence in text){
+  
+  value = calculate_chi_squared(sentence, letter_frequencies)
+  
+  result = c(result, value)
+}
+
+result = tibble(result)
+
+ggplot(result) + 
+  geom_histogram(aes(x = result)) + 
+  labs (title = "Null Distribution of Chi-Squared Statistic based on Letter Frequency")
+
+
+```
+
+
+```{r, echo=FALSE}
+
+sentences <- c(
+    "She opened the book and started to read the first chapter, eagerly anticipating what might come next.",
+    "Despite the heavy rain, they decided to go for a long walk in the park, crossing the main avenue by the fountain in the center.",
+    "The museum’s new exhibit features ancient artifacts from various civilizations around the world.",
+    "He carefully examined the document, looking for any clues that might help solve the mystery.",
+    "The students gathered in the auditorium to listen to the guest speaker’s inspiring lecture.",
+    "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland.",
+    "The chef demonstrated how to prepare a delicious meal using only locally sourced ingredients, focusing mainly on some excellent dinner recipes from Spain.",
+    "They watched the sunset from the hilltop, marveling at the beautiful array of colors in the sky.",
+    "The committee reviewed the proposal and provided many points of useful feedback to improve the project’s effectiveness.",
+    "Despite the challenges faced during the project, the team worked tirelessly to ensure its successful completion, resulting in a product that exceeded everyone’s expectations."
+)
+
+p_values = numeric(0)
+
+for (sentence in sentences){
+  
+  test_stat = calculate_chi_squared(sentence, letter_frequencies)
+  p_value = sum(result >= test_stat)/nrow(result)
+  p_values = c(p_values, p_value)
+}
+
+sent_tibble = tibble(Sentences = sentences, p_values = p_values)
+
+kable(sent_tibble)
+```
+
+Because the p-value of the sixth sentence is the lower than the other p-values and extremely small, we can conclude that the sixth sentence, "Feeling vexed after an arduous and zany day at work, she hoped for a peaceful and quiet evening at home, cozying up after a quick dinner with some TV, or maybe a book on her upcoming visit to Auckland.", is produced by an LLM because the null hypothesis that the sentence follows the “typical” English letter distribution	is extremely hard to explain given the low p-value.
